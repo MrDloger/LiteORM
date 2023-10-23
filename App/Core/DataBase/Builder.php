@@ -83,6 +83,12 @@ class Builder
 						break;
 					
 					case '=':
+					case '>':
+					case '<':
+					case '<=':
+					case '>=':
+					case '!=':
+					case '<>':
 						$filter = "{$wh['field']} {$wh['operator']} ? ";
 						$values[] = $wh['value'];
 						break;
