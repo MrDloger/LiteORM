@@ -8,13 +8,34 @@ class Builder
 	const OPERATOR = [
 		'SELECT' => 'SELECT :columns from'
 	];
+	/**
+     * Array of condition parameters
+     */
 	private array $wheres;
+	/**
+	 * SQL operator
+	 */
 	private string $operator;
+	/**
+	 * An array of columns that must be included for the query 
+	 */
 	private array $columns;
+	/**
+	 * Create a new query builder instance.
+	 * @param string $modelClass
+	 */
 	public function __construct(private string $modelClass)
 	{
 
 	}
+	/**
+	 * Adding a condition for the WHERE operator
+	 * @param  string $field
+	 * @param  string $operator
+	 * @param  string $value
+	 * @param  string $boolean
+	 * @return static
+	 */
 	public function where($field, $operator = null, $value = null, $boolean = 'AND'):static
 	{
 		$boolean = strtoupper($boolean);
@@ -31,6 +52,11 @@ class Builder
 	// 	$this->where($field, $operator, $value, 'OR');
 	// 	return $this;
 	// }
+	/**
+	 * Building a Query
+	 * @param  string|array $columns
+	 * @return false|array Model
+	 */
 	public function get($columns = null):false|array
 	{
 		$this->setColumns($columns);
@@ -42,30 +68,53 @@ class Builder
 		if (empty($elements)) return false;
 		return $elements;
 	}
+	/**
+	 * Building a Query for first item
+	 * @param  string|array $columns
+	 * @return false|array Model
+	 */
 	public function first($columns = null):false|Model
 	{
 		$this->setColumns($columns);
 		return new $this->modelClass(db()->executeQuery(...$this->buildQuery())->fetch()) ?? false;
 	}
+	/**
+	 * Adding Columns to a Query
+	 * @param  string|array $columns
+	 * @return static
+	 */
 	public function select(string|array|null $columns = null):static
 	{
-		$this->operetor = 'SELECT';
+		//$this->operetor = 'SELECT';
 		$this->setColumns($columns);
 		return $this;
 	}
+	/**
+	 * Adding Columns to a Query
+	 * @param  string|array $columns
+	 * @return static
+	 */
 	private function setColumns(string|array|null $columns):static
 	{
-
 		$columns = !empty($columns) ? (is_array($columns) ? $columns : $this->explodeString($columns)) : ['*'];
 		foreach($columns as $col){
 			if (empty($this->columns[$col])) $this->columns[$col] = $col;
 		}
 		return $this;
 	}
-	private function explodeString($str):array
+	/**
+	 * Splitting a string into an array
+	 * @param  string $str
+	 * @return array
+	 */
+	private function explodeString(string $str):array
 	{
 		return preg_split('/[|\s,]+/', $str);
 	}
+	/**
+	 * Building a Query
+	 * @return array
+	 */
 	private function buildQuery():array
 	{
 		$columns = implode(', ', $this->columns);
