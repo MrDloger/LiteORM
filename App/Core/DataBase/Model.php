@@ -44,10 +44,6 @@ abstract class Model
 		if (!$res) return false;
 		return new static($res->fetch());
 	}
-	static public function findFirst()
-	{
-
-	}
 	static public function create(array $values):false|static
 	{
 		$values = static::loadValues($values);
@@ -68,17 +64,10 @@ abstract class Model
 	{
 		return (new Builder(static::class))->where($field, $operator, $value, $boolean);
 	}
-	// static public function whereAnd($field, $operator = null, $value = null):Builder
-	// {
-	// 	return self::where($field, $operator, $value, 'AND');
-	// }
-	// static public function whereOr($field, $operator = null, $value = null):Builder
-	// {
-	// 	return self::where($field, $operator, $value, 'OR');
-	// }
-	static public function select(string $columns, string $filter, array $values):\PDOStatement
+	static public function select(string|null $columns = null):Builder
 	{
-		return Db::select(static::getTableName(), $columns, $filter, $values);
+		//return Db::select(static::getTableName(), $columns, $filter, $values);
+		return (new Builder(static::class))->select($columns);
 
 	}
 	public function toArray():array

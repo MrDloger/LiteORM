@@ -6,8 +6,9 @@ namespace App\Core\DataBase;
 class Builder
 {
 	const OPERATOR = [
-		'SELECT' => 'SELECT :columns from'
+		'SELECT' => 'SELECT :columns FROM'
 	];
+	const ORDER = ['ASC' => 'ASC', 'DESC' => 'DESC'];
 	/**
      * Array of condition parameters
      */
@@ -24,6 +25,18 @@ class Builder
 	 * Create a new query builder instance.
 	 * @param string $modelClass
 	 */
+	/**
+	 * limit Query
+	 */
+	private int|null $limit;
+	/**
+	 * array Order by Query
+	 */
+	private array $order;
+	/**
+	 * offset Query
+	 */
+	private int|null $offset;
 	public function __construct(private string $modelClass)
 	{
 
@@ -42,18 +55,8 @@ class Builder
 		$this->wheres[] = ['field' => $field, 'operator' => $operator, 'value' => $value, 'boolean' => $boolean];
 		return $this;
 	}
-	// public function whereAnd($field, $operator = null, $value = null):static
-	// {
-	// 	$this->where($field, $operator, $value, 'AND');
-	// 	return $this;
-	// }
-	// public function whereOr($field, $operator = null, $value = null):static
-	// {
-	// 	$this->where($field, $operator, $value, 'OR');
-	// 	return $this;
-	// }
 	/**
-	 * Building a Query
+	 * Runing Query
 	 * @param  string|array $columns
 	 * @return false|array Model
 	 */
@@ -69,6 +72,25 @@ class Builder
 		return $elements;
 	}
 	/**
+	 * add limit in Query
+	 * @param  int    $limit
+	 * @param  int|null   $offset
+	 * @return static
+	 */
+	public function limit(int $limit, int|null $offset = null):static
+	{
+		$this->limit =  $limit;
+		$this->offset = $offset;
+		return $this;
+	}
+	public function order(array $orders):static
+	{
+		foreach($orders as $key => $value){
+			$this->order[$key] = strtoupper($value);
+		}
+		return $this;
+	}
+	/**
 	 * Building a Query for first item
 	 * @param  string|array $columns
 	 * @return false|array Model
@@ -76,6 +98,7 @@ class Builder
 	public function first($columns = null):false|Model
 	{
 		$this->setColumns($columns);
+		$this->limit = 1;
 		return new $this->modelClass(db()->executeQuery(...$this->buildQuery())->fetch()) ?? false;
 	}
 	/**
@@ -121,16 +144,15 @@ class Builder
 		$query = str_replace(':columns', $columns, self::OPERATOR[$this->operator ?? 'SELECT'])  . ' ' . ($this->modelClass)::getTableName();
 		$filter = '';
 		$values = [];
-		if (!empty($this->wheres)) {
+		if (isset($this->wheres)) {
 			foreach($this->wheres as $key => $wh){
 				switch (strtoupper($wh['operator'])) {
 					case 'IN':
 						if (!is_array($wh['value'])) $wh['value'] = $this->explodeString($wh['value']);
 						$placeholder = str_repeat('?,', count($wh['value']) - 1) . '?';
-						$filter = "{$wh['field']} " . strtoupper($wh['operator']) . " (" . $placeholder . ") ";
+						$filter = "{$wh['field']} " . strtoupper($wh['operator']) . " (" . $placeholder . ")";
 						$values = array_merge($values, $wh['value']);
 						break;
-					
 					case '=':
 					case '>':
 					case '<':
@@ -138,14 +160,28 @@ class Builder
 					case '>=':
 					case '!=':
 					case '<>':
-						$filter = "{$wh['field']} {$wh['operator']} ? ";
+						$filter = "{$wh['field']} {$wh['operator']} ?";
 						$values[] = $wh['value'];
 						break;
 				}
-				
 			}
 			$query .= ' WHERE ' . $filter;
 		}
+		if (isset($this->order)) {
+			foreach($this->order as $columns => $direction) {
+				$order[] = $columns . (isset(self::ORDER[$direction]) ? ' ' . self::ORDER[$direction] : '');
+			}
+			$query .= ' ORDER BY ' . implode(', ', $order);
+		}
+		if (isset($this->limit)) {
+			$query .= ' LIMIT ?';
+			$values[] = $this->limit;
+		}
+		if (isset($this->offset)) {
+			$query .= ' OFFSET ?';
+			$values[] = $this->offset;
+		}
+		//ddv(['query' => $query, 'values' => $values]);
 		return ['query' => $query, 'values' => $values];
 	}
 }
